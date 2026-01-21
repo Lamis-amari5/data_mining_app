@@ -304,7 +304,7 @@ def main():
         # Data split configuration
         st.subheader("Train-Test Split")
         test_size = st.slider("Test Set Size (%)", 10, 50, 20) / 100
-        random_state = st.number_input("Random State (for reproducibility)", 0, 1000, 42)
+        random_state = 42
         
         # Train model button
         if st.button("🚀 Train Model", type="primary"):
