@@ -103,7 +103,7 @@ def main():
                 st.dataframe(df.head(10))
 
                 # Calculate missing values
-                missing_symbols = ["?", "NA", "N/A", "na", "null", "None", "unknown", "Unknown", ""]
+                missing_symbols = ["?", "NA", "N/A", "na", "null", "None", "unknown", "Unknown", "!" , " "]
     
                 missing_count = df.isnull().sum().sum()
                 missing_symbols_count = df.astype(str).isin(missing_symbols).sum().sum()
@@ -130,6 +130,14 @@ def main():
         
         df = st.session_state.data
         
+        # Define missing value symbols
+        missing_symbols = ["?", "NA", "N/A", "na", "null", "None", "unknown", "Unknown", "!" , " "]
+       
+       # Calculate missing symbols per column
+        def count_missing_symbols(column):
+         return column.astype(str).isin(missing_symbols).sum()
+       
+       
         # Dataset information
         st.subheader("Dataset Information")
         
@@ -141,7 +149,8 @@ def main():
                 'Column': df.columns,
                 'Type': df.dtypes.values,
                 'Non-Null Count': df.count().values,
-                'Null Count': df.isnull().sum().values
+                'Null Count': df.isnull().sum().values,
+                'Missing Symbols': [count_missing_symbols(df[col]) for col in df.columns]
             })
             st.dataframe(info_df)
         
@@ -151,14 +160,20 @@ def main():
         
         # Missing values visualization
         st.subheader("Missing Values Analysis")
-        missing_data = df.isnull().sum()
-        if missing_data.sum() > 0:
+        missing_nan = df.isnull().sum()
+        missing_sym = pd.Series([count_missing_symbols(df[col]) for col in df.columns], index=df.columns)
+        total_missing = missing_nan + missing_sym
+
+        if total_missing.sum() > 0:
             st.write("Columns with missing values:")
             missing_df = pd.DataFrame({
-                'Column': missing_data[missing_data > 0].index,
-                'Missing Count': missing_data[missing_data > 0].values,
-                'Percentage': (missing_data[missing_data > 0].values / len(df) * 100).round(2)
+                'Column': total_missing[total_missing > 0].index,
+                'Missing Count': missing_nan[total_missing > 0].values,
+                'Missing Symbols': missing_sym[total_missing > 0].values,
+                'Total Missing': total_missing[total_missing > 0].values,
+                'Percentage': (total_missing[total_missing > 0].values / len(df) * 100).round(2)
             })
+           
             st.dataframe(missing_df)
             
             # Visualize missing values

@@ -28,7 +28,7 @@ def handle_missing_values(self, df):
     df_copy = df.copy()
     
     # Define missing value symbols
-    missing_symbols = ["?", "NA", "N/A", "na", "null", "None", "unknown", "Unknown", ""]
+    missing_symbols = ["?", "NA", "N/A", "na", "null", "None", "unknown", "Unknown", "!" , " "]
     
     # Replace missing symbols with NaN across all columns
     for col in df_copy.columns:
