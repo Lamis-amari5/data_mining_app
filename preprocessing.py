@@ -65,7 +65,7 @@ def handle_missing_values(self, df):
     
     return df_copy
     
-    def encode_categorical(self, df, target_column=None):
+def encode_categorical(self, df, target_column=None):
         """
         Encode categorical variables
         - Use Label Encoding for binary categories
@@ -91,7 +91,7 @@ def handle_missing_values(self, df):
         
         return df_copy, label_encoders
     
-    def normalize_features(self, X_train, X_test):
+def normalize_features(self, X_train, X_test):
         """
         Normalize features using StandardScaler
         Fit on training data, transform both train and test
@@ -101,7 +101,7 @@ def handle_missing_values(self, df):
         
         return X_train_scaled, X_test_scaled
     
-    def remove_outliers_iqr(self, X, y):
+def remove_outliers_iqr(self, X, y):
       """
        Remove outliers using IQR method
        Only applied on numeric features
@@ -123,7 +123,7 @@ def handle_missing_values(self, df):
 
 
 
-    def prepare_data(self, df, target_column):
+def prepare_data(self, df, target_column):
         """
         Complete preprocessing pipeline
         1. Handle missing values
@@ -161,7 +161,7 @@ def handle_missing_values(self, df):
         
         return X, y, feature_names, le_target
     
-    def split_data(self, X, y, test_size=0.2, random_state=42):
+def split_data(self, X, y, test_size=0.2, random_state=42):
         """
         Split data into training and testing sets
         """
