@@ -149,11 +149,14 @@ class DataPreprocessor:
         # Remove outliers (IQR)
         X, y = self.remove_outliers_iqr(X, y)
 
-        # Get feature names
-        feature_names = X.columns.tolist()
+        # Get feature names (before converting to numpy array)
+        if isinstance(X, pd.DataFrame):
+            feature_names = X.columns.tolist()
+        else:
+            feature_names = None
 
         # Convert to numpy arrays
-        X = X.values
+        X = X.values if isinstance(X, pd.DataFrame) else X
         y = y.values if hasattr(y, 'values') else y
 
         return X, y, feature_names, le_target
