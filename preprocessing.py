@@ -40,26 +40,29 @@ class DataPreprocessor:
             le = LabelEncoder()
             y = le.fit_transform(y)
 
-        # Handle categorical features (one-hot encoding)
+        # One-hot encode categorical features
         X = pd.get_dummies(X, drop_first=True)
 
         # Remove outliers using IQR if requested
         if remove_outliers:
-            Q1 = X.quantile(0.25)
-            Q3 = X.quantile(0.75)
-            IQR = Q3 - Q1
-            filter_mask = ~((X < (Q1 - 1.5 * IQR)) | (X > (Q3 + 1.5 * IQR))).any(axis=1)
-            if filter_mask.sum() > 0:
-                X = X.loc[filter_mask]
-                y = y.loc[filter_mask]
-            # Ensure at least one row remains
-            if X.shape[0] == 0:
-                X = df.drop(columns=[target])
-                y = df[target]
-                if le:
-                    y = le.transform(y)
+            # Only numeric columns
+            numeric_cols = X.select_dtypes(include=[np.number]).columns
+            if len(numeric_cols) > 0:
+                Q1 = X[numeric_cols].quantile(0.25)
+                Q3 = X[numeric_cols].quantile(0.75)
+                IQR = Q3 - Q1
+                filter_mask = ~((X[numeric_cols] < (Q1 - 1.5 * IQR)) | (X[numeric_cols] > (Q3 + 1.5 * IQR))).any(axis=1)
+                if filter_mask.sum() > 0:
+                    X = X.loc[filter_mask]
+                    y = y.loc[filter_mask]
+                # Ensure at least one row remains
+                if X.shape[0] == 0:
+                    X = df.drop(columns=[target])
+                    y = df[target]
+                    if le:
+                        y = le.transform(y)
         
-        # Scale features
+        # Scale numeric features
         scaler = StandardScaler()
         X_scaled = pd.DataFrame(scaler.fit_transform(X), columns=X.columns)
 
