@@ -128,7 +128,10 @@ def main():
             st.warning("⚠️ Please upload a dataset first!")
             return
         
-        df = st.session_state.data
+        df = st.session_state.data.copy()
+        # Remove ID column(s)
+        id_cols = [col for col in df.columns if col.lower() == 'id']
+        df = df.drop(columns=id_cols, errors='ignore')
         
         # Define missing value symbols
         missing_symbols = ["?", "NA", "N/A", "na", "null", "None", "unknown", "Unknown", "!" , " "]
@@ -217,8 +220,8 @@ def main():
               st.write(f"Bar chart of `{col}`")
               fig = viz.plot_categorical_distribution(df, col)
               st.pyplot(fig)
+        
 
-              
         # Select target column
         st.subheader("Select Target Column")
         target_col = st.selectbox(
