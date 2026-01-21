@@ -132,7 +132,7 @@ def main():
         # Remove ID column(s)
         id_cols = [col for col in df.columns if col.lower() == 'id']
         df = df.drop(columns=id_cols, errors='ignore')
-        
+
         # Define missing value symbols
         missing_symbols = ["?", "NA", "N/A", "na", "null", "None", "unknown", "Unknown", "!" , " "]
        
@@ -186,40 +186,6 @@ def main():
         else:
             st.success("✅ No missing values in the dataset!")
         
-        # Feature Visualization
-        st.subheader("Data Visualization")
-
-        numeric_cols = df.select_dtypes(include=["int64", "float64"]).columns.tolist()
-        categorical_cols = df.select_dtypes(include=["object", "category", "bool"]).columns.tolist()
-        if numeric_cols:
-            st.write("**Numeric Features Distribution**")
-            for col in numeric_cols:
-                st.write(f"Histogram of `{col}`")
-                st.bar_chart(df[col].value_counts().sort_index())
-            
-            st.write("**Boxplots for Numeric Features**")
-            for col in numeric_cols:
-                st.write(f"Boxplot of `{col}`")
-                fig = viz.plot_boxplot(df, col)
-                st.pyplot(fig)
-
-            # Scatter plots for numeric features
-            st.write("**Scatter Plots (Feature vs Feature)**")  
-            if len(numeric_cols) > 1:
-                for i in range(len(numeric_cols)):
-                    for j in range(i+1, len(numeric_cols)):
-                        col_x = numeric_cols[i]
-                        col_y = numeric_cols[j]
-                        st.write(f"Scatter plot: `{col_x}` vs `{col_y}`")
-                        fig = viz.plot_scatter(df, col_x, col_y)
-                        st.pyplot(fig) 
-        # Categorical features
-        if categorical_cols:
-            st.write("**Categorical Features Distribution**")
-            for col in categorical_cols:
-              st.write(f"Bar chart of `{col}`")
-              fig = viz.plot_categorical_distribution(df, col)
-              st.pyplot(fig)
         
 
         # Select target column
@@ -236,12 +202,47 @@ def main():
             
             # Display target distribution
             st.write("**Target Distribution:**")
-            if df[target_col].dtype in ['object', 'category'] or df[target_col].nunique() < 20:
-                target_counts = df[target_col].value_counts()
-                st.bar_chart(target_counts)
-            else:
-                st.line_chart(df[target_col])
-    
+            viz = Visualizer()
+            fig = viz.plot_target_distribution(df[target_col])
+            if fig:
+              st.pyplot(fig)
+        
+        # ==================== Data Visualization ====================
+        st.subheader("Data Visualizations")
+        numeric_cols = df.select_dtypes(include=np.number).columns.tolist()
+        categorical_cols = df.select_dtypes(exclude=np.number).columns.tolist()
+        viz = Visualizer()
+        # Scatter plot (select columns)
+        if len(numeric_cols) >= 2:
+          st.write("**Scatter Plot**")
+          col_x = st.selectbox("X-axis:", options=numeric_cols, key='scatter_x')
+          col_y = st.selectbox("Y-axis:", options=[c for c in numeric_cols if c != col_x], key='scatter_y')
+          fig = viz.plot_scatter(df, col_x, col_y)
+          if fig:
+            st.pyplot(fig)
+        
+        # Boxplots for numeric columns
+        if numeric_cols:
+          st.write("**Boxplots**")
+          for col in numeric_cols:
+            fig = viz.plot_boxplot(df, col)
+            if fig:
+                st.pyplot(fig)
+
+        # Count plots for categorical columns
+        if categorical_cols:
+          st.write("**Categorical Distributions**")
+          for col in categorical_cols:
+            fig = viz.plot_categorical_count(df, col)
+            if fig:
+                st.pyplot(fig)
+        
+        # Correlation matrix
+        st.write("**Correlation Matrix**")
+        fig = viz.plot_correlation_matrix(df)
+        if fig:
+         st.pyplot(fig)
+
     # Step 3: Select Algorithm
     elif page == "3. Select Algorithm":
         st.header("🤖 Step 3: Select and Configure Algorithm")
