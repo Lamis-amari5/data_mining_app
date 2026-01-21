@@ -98,7 +98,15 @@ class Visualizer:
         feature_importance_df = pd.DataFrame({
             'feature': feature_names,
             'importance': importances
-        }).sort_values('importance', ascending=False).head(top_n)
+        })
+
+        feature_importance_df['feature'] = feature_importance_df['feature'].astype(str)
+        feature_importance_df['importance'] = pd.to_numeric(feature_importance_df['importance'], errors='coerce')
+        # Drop rows with NaNs
+        feature_importance_df = feature_importance_df.dropna()
+
+        # Take top N features
+        feature_importance_df = feature_importance_df.sort_values('importance', ascending=False).head(top_n)
         
         fig, ax = plt.subplots(figsize=(10, 6))
         ax.barh(feature_importance_df['feature'], feature_importance_df['importance'], color='steelblue')
