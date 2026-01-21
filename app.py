@@ -101,7 +101,14 @@ def main():
                 # Display first few rows
                 st.subheader("Preview of Dataset")
                 st.dataframe(df.head(10))
-                
+
+                # Calculate missing values
+                missing_symbols = ["?", "NA", "N/A", "na", "null", "None", "unknown", "Unknown", ""]
+    
+                missing_count = df.isnull().sum().sum()
+                missing_symbols_count = df.astype(str).isin(missing_symbols).sum().sum()
+                total_missing = missing_count + missing_symbols_count
+
                 # Basic statistics
                 col1, col2, col3 = st.columns(3)
                 with col1:
@@ -109,13 +116,8 @@ def main():
                 with col2:
                     st.metric("Number of Columns", df.shape[1])
                 with col3:
-                     missing_count = df.isnull().sum().sum()
-                     missing_symbols = ["?", "NA", "N/A", "na", "null", "None", "unknown", "Unknown", ""]
-                     missing_symbols_count = 0
-                     for col in df.columns:
-                      missing_symbols_count += df[col].astype(str).isin(missing_symbols).sum()
-                      total_missing = missing_count + missing_symbols_count
-                      st.metric("Total Missing Values", f"{total_missing} (NaN: {missing_count}, Symbols: {missing_symbols_count})")
+                    st.metric("Total Missing Values", total_missing)
+                    st.caption(f"NaN: {missing_count} | Symbols: {missing_symbols_count}")
                 
     
     # Step 2: Data Exploration
