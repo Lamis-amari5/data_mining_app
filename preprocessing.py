@@ -26,7 +26,12 @@ class DataPreprocessor:
         - Categorical columns: fill with mode (most frequent)
         """
         df_copy = df.copy()
-        
+        #  Define missing value symbols
+        missing_symbols = ["?", "NA", "N/A", "na", "null", "None", "unknown", "Unknown", ""]
+
+        #  Replace them with real NaN
+        df_copy.replace(missing_symbols, np.nan, inplace=True)
+
         # Separate numeric and categorical columns
         numeric_cols = df_copy.select_dtypes(include=[np.number]).columns
         categorical_cols = df_copy.select_dtypes(include=['object', 'category']).columns
@@ -77,6 +82,28 @@ class DataPreprocessor:
         
         return X_train_scaled, X_test_scaled
     
+    def remove_outliers_iqr(self, X, y):
+      """
+       Remove outliers using IQR method
+       Only applied on numeric features
+    """
+      X_df = pd.DataFrame(X)
+
+      Q1 = X_df.quantile(0.25)
+      Q3 = X_df.quantile(0.75)
+      IQR = Q3 - Q1
+
+      mask = ~((X_df < (Q1 - 1.5 * IQR)) | (X_df > (Q3 + 1.5 * IQR))).any(axis=1)
+
+      X_clean = X_df[mask].values
+      y_clean = y[mask]
+
+      return X_clean, y_clean
+
+    
+
+
+
     def prepare_data(self, df, target_column):
         """
         Complete preprocessing pipeline
@@ -102,6 +129,9 @@ class DataPreprocessor:
         
         # Encode categorical features
         X, _ = self.encode_categorical(X)
+        
+        # Remove outliers (IQR)
+        X, y = self.remove_outliers_iqr(X, y)
         
         # Get feature names
         feature_names = X.columns.tolist()
