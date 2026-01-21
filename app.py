@@ -114,14 +114,75 @@ def main():
         with col2:
             st.write("Descriptive Statistics")
             st.dataframe(df.describe())
+        # Missing values visualization
+    st.subheader("Missing Values Analysis")
+    missing_nan = df.isnull().sum()
+    missing_sym = pd.Series([count_missing_symbols(df[col]) for col in df.columns], index=df.columns)
+    total_missing = missing_nan + missing_sym
 
+    if total_missing.sum() > 0:
+        st.write("Columns with missing values:")
+        missing_df = pd.DataFrame({
+            'Column': total_missing[total_missing > 0].index,
+            'Missing Count': missing_nan[total_missing > 0].values,
+            'Missing Symbols': missing_sym[total_missing > 0].values,
+            'Total Missing': total_missing[total_missing > 0].values,
+            'Percentage': (total_missing[total_missing > 0].values / len(df) * 100).round(2)
+        })
+        st.dataframe(missing_df)
+        
+        # Visualize missing values
+        viz = Visualizer()
+        fig = viz.plot_missing_values(df)
+        st.pyplot(fig)
+    else:
+          st.success("✅ No missing values in the dataset!")
+    
+       # Feature Visualization
+    st.subheader("Data Visualization")
+    
+    numeric_cols = df.select_dtypes(include=["int64", "float64"]).columns.tolist()
+    categorical_cols = df.select_dtypes(include=["object", "category", "bool"]).columns.tolist()
+    
+        # Numeric features
+    if numeric_cols:
+         st.write("**Numeric Features Distribution**")
+         for col in numeric_cols:
+            st.write(f"Histogram of `{col}`")
+            st.bar_chart(df[col].value_counts().sort_index())
+        
+         st.write("**Boxplots for Numeric Features**")
+         for col in numeric_cols:
+            st.write(f"Boxplot of `{col}`")
+            fig = viz.plot_boxplot(df, col)
+            st.pyplot(fig)
+        
+         # Scatter plots for numeric features
+         st.write("**Scatter Plots (Feature vs Feature)**")
+         if len(numeric_cols) > 1:
+            for i in range(len(numeric_cols)):
+                for j in range(i+1, len(numeric_cols)):
+                    col_x = numeric_cols[i]
+                    col_y = numeric_cols[j]
+                    st.write(f"Scatter plot: `{col_x}` vs `{col_y}`")
+                    fig = viz.plot_scatter(df, col_x, col_y)
+                    st.pyplot(fig)
+    
+    # Categorical features
+    if categorical_cols:
+          st.write("**Categorical Features Distribution**")
+          for col in categorical_cols:
+            st.write(f"Bar chart of `{col}`")
+            fig = viz.plot_categorical_distribution(df, col)
+            st.pyplot(fig)
+    
         # Select target column
-        st.subheader("Select Target Column")
-        target_col = st.selectbox(
+    st.subheader("Select Target Column")
+    target_col = st.selectbox(
             "Choose the target column:",
             options=df.columns.tolist()
-        )
-        if st.button("Confirm Target Column"):
+    )
+    if st.button("Confirm Target Column"):
             st.session_state.target_column = target_col
             st.success(f"✅ Target column set to: {target_col}")
 
