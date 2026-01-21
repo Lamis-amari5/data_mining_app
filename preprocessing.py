@@ -1,166 +1,118 @@
-"""
-preprocessing.py
-Unified and safe preprocessing module for Data Mining project
-Compatible with Drug Consumption and UCI Adult Income datasets
-"""
-
 import numpy as np
 import pandas as pd
-
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import (
-    OneHotEncoder,
-    LabelEncoder,
-    RobustScaler
-)
+from sklearn.preprocessing import LabelEncoder, StandardScaler, OneHotEncoder
 from sklearn.impute import SimpleImputer
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
-
+from sklearn.model_selection import train_test_split
 
 class DataPreprocessor:
-    """
-    Universal preprocessing pipeline:
-    - Handles missing values
-    - Encodes categorical variables
-    - Scales numerical features
-    - Prevents data leakage
-    """
-
     def __init__(self):
-        self.preprocessor = None
         self.target_encoder = None
-        self.feature_names = None
+        self.preprocessor = None
+        self.scaler = None
 
-    # --------------------------------------------------
-    # Target encoding
-    # --------------------------------------------------
-    def encode_target(self, y, binary_mapping=None):
-     """
-     Encode target variable safely (pandas or numpy)
-     """
-     # Ensure pandas Series
-     if isinstance(y, np.ndarray):
-        y = pd.Series(y)
+    # -------------------------------------------------
+    # Handle custom missing values
+    # -------------------------------------------------
+    def handle_missing_symbols(self, df):
+        df_copy = df.copy()
+        missing_symbols = ["?", "NA", "N/A", "na", "null", "None", "unknown", "Unknown", "!", " "]
+        for col in df_copy.columns:
+            df_copy[col] = df_copy[col].replace(missing_symbols, np.nan)
+        return df_copy
 
-     y = y.astype(str)
+    # -------------------------------------------------
+    # Encode target
+    # -------------------------------------------------
+    def encode_target(self, y, mapping=None):
+        y_array = y.to_numpy() if not isinstance(y, np.ndarray) else y
 
-     if binary_mapping is not None:
-        y = y.map(binary_mapping)
-        if y.isnull().any():
-            raise ValueError("Binary target mapping is incomplete.")
-        return y.to_numpy(), None
+        if mapping is not None:
+            y_encoded = np.array([mapping[val] for val in y_array])
+            return y_encoded
 
-     self.target_encoder = LabelEncoder()
-     y_encoded = self.target_encoder.fit_transform(y)
+        self.target_encoder = LabelEncoder()
+        y_encoded = self.target_encoder.fit_transform(y_array)
+        return y_encoded
 
-     return y_encoded, self.target_encoder
+    # -------------------------------------------------
+    # Remove outliers using IQR
+    # -------------------------------------------------
+    def remove_outliers_iqr(self, X, y):
+        X_df = pd.DataFrame(X)
+        Q1 = X_df.quantile(0.25)
+        Q3 = X_df.quantile(0.75)
+        IQR = Q3 - Q1
 
-    # --------------------------------------------------
-    # Feature preprocessing
-    # --------------------------------------------------
-    def build_preprocessor(self, X):
-        """
-        Build ColumnTransformer for numeric and categorical features
-        """
-        numeric_features = X.select_dtypes(include=['int64', 'float64']).columns.tolist()
-        categorical_features = X.select_dtypes(include=['object', 'category']).columns.tolist()
+        mask = ~((X_df < (Q1 - 1.5 * IQR)) | (X_df > (Q3 + 1.5 * IQR))).any(axis=1)
 
+        X_clean = X_df[mask].values
+        y_clean = y[mask]
+
+        return X_clean, y_clean
+
+    # -------------------------------------------------
+    # Main preprocessing pipeline
+    # -------------------------------------------------
+    def prepare_data(self, df, target_column, binary_target_mapping=None):
+        # 1️⃣ Handle custom missing values
+        df_clean = self.handle_missing_symbols(df)
+
+        # 2️⃣ Separate features and target
+        X = df_clean.drop(columns=[target_column])
+        y = df_clean[target_column]
+
+        # 3️⃣ Detect numeric and categorical columns
+        numeric_features = X.select_dtypes(include=["int64", "float64"]).columns.tolist()
+        categorical_features = X.select_dtypes(include=["object", "category"]).columns.tolist()
+
+        # 4️⃣ Pipelines
         numeric_pipeline = Pipeline(steps=[
             ("imputer", SimpleImputer(strategy="median")),
-            ("scaler", RobustScaler())
+            ("scaler", StandardScaler())
         ])
 
         categorical_pipeline = Pipeline(steps=[
             ("imputer", SimpleImputer(strategy="most_frequent")),
-            ("encoder", OneHotEncoder(
-                drop="first",
-                handle_unknown="ignore",
-                sparse_output=False
-            ))
+            ("onehot", OneHotEncoder(handle_unknown="ignore", sparse_output=False))
         ])
 
+        # 5️⃣ ColumnTransformer
         self.preprocessor = ColumnTransformer(
             transformers=[
                 ("num", numeric_pipeline, numeric_features),
                 ("cat", categorical_pipeline, categorical_features)
-            ],
-            remainder="drop"
+            ]
         )
 
-    # --------------------------------------------------
-    # Main preprocessing pipeline
-    # --------------------------------------------------
-    def prepare_data(
-        self,
-        df,
-        target_column,
-        test_size=0.2,
-        random_state=42,
-        binary_target_mapping=None
-    ):
-        """
-        Full preprocessing pipeline (safe & reusable)
-        """
+        # 6️⃣ Fit + transform features
+        X_processed = self.preprocessor.fit_transform(X)
 
-        # ----------------------------
-        # 1. Replace common missing symbols
-        # ----------------------------
-        missing_symbols = ["?", "NA", "N/A", "na", "null", "None", "unknown", "Unknown", "!", " "]
-        df = df.replace(missing_symbols, np.nan)
+        # 7️⃣ Encode target
+        y_encoded = self.encode_target(y, binary_target_mapping)
 
-        # ----------------------------
-        # 2. Separate features / target
-        # ----------------------------
-        X = df.drop(columns=[target_column])
-        y = df[target_column]
+        # 8️⃣ Remove outliers
+        X_processed, y_encoded = self.remove_outliers_iqr(X_processed, y_encoded)
 
-        # ----------------------------
-        # 3. Encode target
-        # ----------------------------
-        y, _ = self.encode_target(y, binary_target_mapping)
+        # 9️⃣ Feature names
+        feature_names = []
+        if numeric_features:
+            feature_names.extend(numeric_features)
+        if categorical_features:
+            ohe = self.preprocessor.named_transformers_["cat"]["onehot"]
+            cat_names = ohe.get_feature_names_out(categorical_features)
+            feature_names.extend(cat_names.tolist())
 
-        # ----------------------------
-        # 4. Train / Test split (NO leakage)
-        # ----------------------------
-        X_train, X_test, y_train, y_test = train_test_split(
-            X,
-            y,
+        return X_processed, y_encoded, feature_names, self.target_encoder
+
+    # -------------------------------------------------
+    # Train/test split
+    # -------------------------------------------------
+    def split_data(self, X, y, test_size=0.2, random_state=42):
+        return train_test_split(
+            X, y,
             test_size=test_size,
             random_state=random_state,
-            stratify=y if len(np.unique(y)) <= 10 else None
-        )
-
-        # ----------------------------
-        # 5. Build & fit preprocessing pipeline
-        # ----------------------------
-        self.build_preprocessor(X_train)
-
-        X_train_processed = self.preprocessor.fit_transform(X_train)
-        X_test_processed = self.preprocessor.transform(X_test)
-
-        # ----------------------------
-        # 6. Feature names (for analysis/report)
-        # ----------------------------
-        try:
-            num_features = self.preprocessor.named_transformers_["num"] \
-                .named_steps["imputer"].get_feature_names_out(
-                    self.preprocessor.transformers_[0][2]
-                )
-
-            cat_features = self.preprocessor.named_transformers_["cat"] \
-                .named_steps["encoder"].get_feature_names_out(
-                    self.preprocessor.transformers_[1][2]
-                )
-
-            self.feature_names = list(num_features) + list(cat_features)
-        except Exception:
-            self.feature_names = None
-
-        return (
-            X_train_processed,
-            X_test_processed,
-            y_train,
-            y_test,
-            self.feature_names
+            stratify=y if len(np.unique(y)) < 20 else None
         )
