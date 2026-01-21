@@ -19,32 +19,51 @@ class DataPreprocessor:
         self.imputer_numeric = SimpleImputer(strategy='mean')
         self.imputer_categorical = SimpleImputer(strategy='most_frequent')
     
-    def handle_missing_values(self, df):
-        """
-        Handle missing values in the dataset
-        - Numeric columns: fill with mean
-        - Categorical columns: fill with mode (most frequent)
-        """
-        df_copy = df.copy()
-        #  Define missing value symbols
-        missing_symbols = ["?", "NA", "N/A", "na", "null", "None", "unknown", "Unknown", ""]
-
-        #  Replace them with real NaN
-        df_copy.replace(missing_symbols, np.nan, inplace=True)
-
-        # Separate numeric and categorical columns
-        numeric_cols = df_copy.select_dtypes(include=[np.number]).columns
-        categorical_cols = df_copy.select_dtypes(include=['object', 'category']).columns
-        
-        # Handle numeric columns
-        if len(numeric_cols) > 0 and df_copy[numeric_cols].isnull().sum().sum() > 0:
-            df_copy[numeric_cols] = self.imputer_numeric.fit_transform(df_copy[numeric_cols])
-        
-        # Handle categorical columns
-        if len(categorical_cols) > 0 and df_copy[categorical_cols].isnull().sum().sum() > 0:
-            df_copy[categorical_cols] = self.imputer_categorical.fit_transform(df_copy[categorical_cols])
-        
-        return df_copy
+def handle_missing_values(self, df):
+    """
+    Handle missing values in the dataset
+    - Numeric columns: fill with mean
+    - Categorical columns: fill with mode (most frequent)
+    """
+    df_copy = df.copy()
+    
+    # Define missing value symbols
+    missing_symbols = ["?", "NA", "N/A", "na", "null", "None", "unknown", "Unknown", ""]
+    
+    # Replace missing symbols with NaN across all columns
+    for col in df_copy.columns:
+        df_copy[col] = df_copy[col].replace(missing_symbols, np.nan)
+    
+    # Convert numeric columns to numeric type (handles string numbers like "38.5")
+    numeric_cols = df_copy.select_dtypes(include=[np.number]).columns.tolist()
+    
+    # Try to convert object columns that might be numeric
+    object_cols = df_copy.select_dtypes(include=['object']).columns.tolist()
+    for col in object_cols:
+        try:
+            df_copy[col] = pd.to_numeric(df_copy[col], errors='ignore')
+        except:
+            pass
+    
+    # Re-identify columns after conversion
+    numeric_cols = df_copy.select_dtypes(include=[np.number]).columns.tolist()
+    categorical_cols = df_copy.select_dtypes(include=['object', 'category']).columns.tolist()
+    
+    # Handle numeric columns - fill with mean
+    if len(numeric_cols) > 0:
+        for col in numeric_cols:
+            if df_copy[col].isnull().sum() > 0:
+                df_copy[col].fillna(df_copy[col].mean(), inplace=True)
+    
+    # Handle categorical columns - fill with mode
+    if len(categorical_cols) > 0:
+        for col in categorical_cols:
+            if df_copy[col].isnull().sum() > 0:
+                mode_val = df_copy[col].mode()
+                if len(mode_val) > 0:
+                    df_copy[col].fillna(mode_val[0], inplace=True)
+    
+    return df_copy
     
     def encode_categorical(self, df, target_column=None):
         """
@@ -132,7 +151,7 @@ class DataPreprocessor:
         
         # Remove outliers (IQR)
         X, y = self.remove_outliers_iqr(X, y)
-        
+
         # Get feature names
         feature_names = X.columns.tolist()
         
