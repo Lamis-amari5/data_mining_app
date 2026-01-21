@@ -181,3 +181,50 @@ class Visualizer:
         plt.tight_layout()
         
         return fig
+    
+    def plot_boxplot(self, df, col):
+        """
+        Create a boxplot for a given column
+        """
+        if col not in df.columns:
+            return None
+
+        fig, ax = plt.subplots(figsize=(8, 5))
+        sns.boxplot(y=df[col], ax=ax, color='lightblue')
+        ax.set_title(f'Boxplot of {col}', fontsize=14, fontweight='bold')
+        ax.set_ylabel(col, fontsize=12)
+        plt.tight_layout()
+        return fig
+
+    def plot_scatter(self, df, col_x, col_y):
+        """
+        Create a scatter plot for two numeric columns
+        """
+        if col_x not in df.columns or col_y not in df.columns:
+            return None
+
+        fig, ax = plt.subplots(figsize=(8, 5))
+        ax.scatter(df[col_x], df[col_y], alpha=0.7, edgecolor='k', color='teal')
+        ax.set_xlabel(col_x, fontsize=12)
+        ax.set_ylabel(col_y, fontsize=12)
+        ax.set_title(f'Scatter Plot: {col_x} vs {col_y}', fontsize=14, fontweight='bold')
+        ax.grid(True, alpha=0.3)
+        plt.tight_layout()
+        return fig
+
+    def plot_categorical_count(self, df, col):
+        """
+        Create a bar plot for a categorical column
+        """
+        if col not in df.columns:
+            return None
+
+        fig, ax = plt.subplots(figsize=(8, 5))
+        counts = df[col].value_counts()
+        sns.barplot(x=counts.index, y=counts.values, ax=ax, palette='pastel')
+        ax.set_title(f'Distribution of {col}', fontsize=14, fontweight='bold')
+        ax.set_xlabel(col, fontsize=12)
+        ax.set_ylabel('Count', fontsize=12)
+        plt.xticks(rotation=45, ha='right')
+        plt.tight_layout()
+        return fig
